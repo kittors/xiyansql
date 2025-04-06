@@ -1,0 +1,26 @@
+# requirements.txt
+
+# PyTorch (核心深度学习库)
+torch
+torchvision
+torchaudio
+
+# Hugging Face 相关库
+transformers  # 加载模型和分词器
+accelerate    # 帮助使用硬件加速 (如 MPS, CUDA)
+sentencepiece # 分词器依赖
+tiktoken      # Qwen 模型常用分词器依赖
+einops        # 某些模型实现可能需要
+
+# --- 新增库 ---
+# 配置管理
+python-dotenv # 用于从 .env 文件加载环境变量
+PyYAML        #用于解析 YAML 文件
+
+# Web 服务器与 API 框架
+fastapi             # 高性能 Web 框架，用于构建 API
+uvicorn[standard]   # ASGI 服务器，用于运行 FastAPI 应用 (standard 包含额外依赖)
+python-multipart  # FastAPI 处理表单数据通常需要 (虽然此 API 主要用 JSON, 但安装上无害)
+
+# 可选: 如果你想用 OpenAI 官方 Python 客户端库来测试本地 API
+# openai

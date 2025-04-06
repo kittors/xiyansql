@@ -1,0 +1,46 @@
+# prompt_config.yaml
+# 用于配置 Prompt 模板和默认数据库 Schema
+
+# 默认的系统消息模板
+# 当 API 请求的 messages 中没有提供 system 角色的消息时使用
+default_system_message_template: |
+  你是一个强大的 Text-to-SQL 助手。
+  给定以下 SQL 表结构，请根据用户的自然语言问题，生成相应的 SQL 查询语句。
+
+# 构建最终 Prompt 的模板
+# 可用占位符: {system_message}, {schema}, {question}
+prompt_template: |
+  {system_message}
+
+  ### 数据库 Schema:
+  {schema}
+
+  ### 问题:
+  {question}
+
+  ### SQL 查询:
+
+# 默认的数据库 Schema (包含 CREATE TABLE 语句)
+# 当 API 请求体中没有直接提供 db_schema 字段时使用。
+# 使用 `|` 保留所有换行和缩进。
+database_schema: |
+  CREATE TABLE statistical_data (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    conversation_id VARCHAR(50) COMMENT '会话ID',
+    year VARCHAR(10) COMMENT '年份 (格式: YYYY, 例如 01, 02, ..., 12)',
+    month VARCHAR(10) COMMENT '月份 (格式: MM, 例如 01, 02, ..., 12)',
+    market_level VARCHAR(50) COMMENT '市场等级',
+    company_code VARCHAR(50) COMMENT '单位编号',
+    company_name VARCHAR(100) COMMENT '单位名称',
+    factor_code VARCHAR(50) COMMENT '因子编号',
+    factor_name VARCHAR(100) COMMENT '因子名称',
+    factor_val DECIMAL(20, 6) COMMENT '因子值',
+    factor_huanbi DECIMAL(10, 4) COMMENT '因子环比',
+    factor_tongbi DECIMAL(10, 4) COMMENT '因子同比',
+    sys_origin VARCHAR(100) COMMENT '数据来源',
+    data_version VARCHAR(50) COMMENT '数据版本',
+    factor_unit VARCHAR(20) COMMENT '计算单位',
+    calc_time VARCHAR(20) COMMENT '计算时间',
+    create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '数据采集时间'
+  );
+  # 如果有多个表结构，可以在这里继续添加，例如用分号 ; 隔开或者直接换行添加下一个 CREATE TABLE 语句。
