@@ -37,7 +37,7 @@ except ImportError:
         return await loop.run_in_executor(None, lambda: func(*args, **kwargs))
 
 
-# --- 1. 加载 .env 配置 (不变) ---
+# --- 1. 加载 .env 配置 ---
 load_dotenv()
 MODEL_ID = os.getenv("MODEL_ID", "XGenerationLab/XiYanSQL-QwenCoder-3B-2502")
 MODEL_DTYPE_STR = os.getenv("MODEL_DTYPE", "float16").lower()
@@ -50,7 +50,7 @@ API_PORT = int(os.getenv("API_PORT", 8000))
 API_KEYS_STR = os.getenv("API_KEYS", "")
 ALLOWED_API_KEYS = set(key.strip() for key in API_KEYS_STR.split(',') if key.strip())
 
-# --- 2. 加载 prompt_config.yaml (不变) ---
+# --- 2. 加载 prompt_config.yaml ---
 PROMPT_CONFIG_PATH = "prompt_config.yaml"
 prompt_config = {}
 try:
@@ -67,22 +67,22 @@ except FileNotFoundError:
 except yaml.YAMLError as e: print(f"错误: 解析配置文件 {PROMPT_CONFIG_PATH} 失败。 Error: {e}"); exit(1)
 except Exception as e: print(f"加载配置文件 {PROMPT_CONFIG_PATH} 时发生未知错误: {e}"); exit(1)
 
-# --- 3. 打印配置 (不变) ---
+# --- 3. 打印配置 ---
 print("--- API 服务器配置 ---") # ... (内容不变) ...
 print(f"模型 ID (MODEL_ID): {MODEL_ID}")
 print(f"默认 DB Schema 已加载: {'是' if DEFAULT_DB_SCHEMA else '否'}")
 print("--------------------------")
 if not ALLOWED_API_KEYS: print("\n*** 警告: API_KEYS 未设置或为空! ***\n")
 
-# --- 4. 全局变量 (不变) ---
+# --- 4. 全局变量 ---
 model, tokenizer, DEVICE, MODEL_DTYPE, model_ready = None, None, None, None, False
 
-# --- 5. 模型数据类型映射 (不变) ---
+# --- 5. 模型数据类型映射 ---
 dtype_map = { "float16": torch.float16, "bfloat16": torch.bfloat16, "float32": torch.float32 }
 MODEL_DTYPE = dtype_map.get(MODEL_DTYPE_STR, torch.float16)
 if MODEL_DTYPE_STR not in dtype_map: print(f"警告: 无效的 MODEL_DTYPE '{MODEL_DTYPE_STR}'。将使用 float16。")
 
-# --- 6. 设备检测逻辑 (不变) ---
+# --- 6. 设备检测逻辑 ---
 def get_device() -> str:
     global DEVICE; # ... (完整逻辑不变) ...
     if DEVICE: return DEVICE
@@ -102,7 +102,7 @@ def get_device() -> str:
     DEVICE = _device; print(f"最终使用设备: {DEVICE.upper()}"); print("------------------")
     return DEVICE
 
-# --- 7. 模型加载逻辑 (不变) ---
+# --- 7. 模型加载逻辑 ---
 def load_model_and_tokenizer():
     global model, tokenizer, model_ready, DEVICE, MODEL_DTYPE; # ... (完整逻辑不变) ...
     if model_ready: return
@@ -120,7 +120,7 @@ def load_model_and_tokenizer():
     except Exception as e:
         print(f"!!! 错误: 加载模型失败! Error: {e}"); model_ready = False
 
-# --- 8. FastAPI 应用生命周期管理 (不变) ---
+# --- 8. FastAPI 应用生命周期管理 ---
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     print("服务器启动中..."); load_model_and_tokenizer()
@@ -132,14 +132,14 @@ async def lifespan(app: FastAPI):
          except Exception as e_mps: print(f"清理 MPS 缓存时出错: {e_mps}")
     print("资源清理完成。")
 
-# --- 9. FastAPI 应用初始化 (不变) ---
+# --- 9. FastAPI 应用初始化 ---
 app = FastAPI(
     title="XiYanSQL 本地 API 服务器 (SQL Only Output)",
     version="1.4.4", # 更新版本号
     lifespan=lifespan
 )
 
-# --- 10. API 密钥认证 (不变) ---
+# --- 10. API 密钥认证 ---
 api_key_header_auth = APIKeyHeader(name="Authorization", auto_error=False)
 async def verify_api_key(api_key_header: Optional[str] = Security(api_key_header_auth)) -> str:
     # ... (逻辑不变) ...
@@ -150,7 +150,7 @@ async def verify_api_key(api_key_header: Optional[str] = Security(api_key_header
         if key in ALLOWED_API_KEYS: return key
     raise HTTPException(status_code=HTTP_403_FORBIDDEN, detail="无效的 API 密钥或格式")
 
-# --- 11. Pydantic 模型定义 (不变) ---
+# --- 11. Pydantic 模型定义 ---
 class ChatMessage(BaseModel): role: str; content: str
 class DeltaMessage(BaseModel): role: Optional[str] = None; content: Optional[str] = None
 class ChatCompletionChunkChoice(BaseModel): index: int; delta: DeltaMessage; finish_reason: Optional[str] = None
@@ -279,11 +279,11 @@ async def generate_sql_stream(
         error_chunk = ChatCompletionChunk(model=MODEL_ID, choices=[ChatCompletionChunkChoice(index=0, delta=DeltaMessage(role="assistant", content=f"错误: {error_detail}"), finish_reason="error")])
         yield f"data: {error_chunk.model_dump_json()}\n\n"; yield f"data: [DONE]\n\n"; return
 
-    # --- 构建 Prompt (不变) ---
+    # --- 构建 Prompt ---
     try: prompt = PROMPT_TEMPLATE.format(system_message=system_message, schema=schema, question=question)
     except KeyError as e: print(f"错误: Prompt 模板占位符 {e}"); prompt = f"{system_message}\n{schema}\n{question}\nSQL:"
 
-    # --- 输入处理、Streamer 设置、启动后台生成线程 (不变) ---
+    # --- 输入处理、Streamer 设置、启动后台生成线程 ---
     try:
         inputs = tokenizer(prompt, return_tensors="pt", padding=True, truncation=True)
         prompt_tokens = inputs['input_ids'].shape[1]
@@ -349,7 +349,7 @@ async def generate_sql_stream(
                  yield f"data: {error_chunk.model_dump_json()}\n\n"
              except Exception: pass
 
-        # --- 确保线程结束 (不变) ---
+        # --- 确保线程结束 ---
         if thread.is_alive(): print("等待后台生成线程结束..."); await to_thread(thread.join); print("后台生成线程已确认结束。")
         else: print("后台生成线程已自行结束。")
         end_time = time.time(); generation_time = end_time - start_time
@@ -438,13 +438,13 @@ async def create_chat_completion(request: ChatCompletionRequest, api_key: str = 
         except Exception as e_dump: print(f"警告: 序列化响应出错: {e_dump}")
         return response
 
-# --- 15. 健康检查端点 (不变) ---
+# --- 15. 健康检查端点 ---
 @app.get("/health", summary="健康检查", tags=["管理"])
 async def health_check():
     if model_ready: return {"status": "ok", "model_ready": True, "device": DEVICE}
     else: raise HTTPException(status_code=HTTP_503_SERVICE_UNAVAILABLE, detail={"status": "error", "model_ready": False, "message": "模型加载失败或未完成。"})
 
-# --- 16. 启动服务器的主入口 (不变) ---
+# --- 16. 启动服务器的主入口 ---
 if __name__ == "__main__":
     import uvicorn
     print(f"\n准备启动 Uvicorn 服务器，监听地址: http://{API_HOST}:{API_PORT}")
