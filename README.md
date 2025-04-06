@@ -43,7 +43,13 @@ pip install -r requirements.txt
 
 ## 运行脚本
 ``` bash
+# 测试脚本
 python run_xiyansql.py
+```
+
+``` bash
+python api_server.py
+
 ```
 
 ## 退出虚拟环境
