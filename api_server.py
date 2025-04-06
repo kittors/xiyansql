@@ -62,13 +62,13 @@ try:
     DEFAULT_SYSTEM_MESSAGE_TEMPLATE = prompt_config.get("default_system_message_template", "你是一个 Text-to-SQL 助手。")
     PROMPT_TEMPLATE = prompt_config.get("prompt_template", "{system_message}\n\n### Schema:\n{schema}\n\n### Question:\n{question}\n\n### SQL:")
 except FileNotFoundError:
-    print(f"警告: 配置文件 {PROMPT_CONFIG_PATH} 未找到。"); # ... (默认值不变) ...
+    print(f"警告: 配置文件 {PROMPT_CONFIG_PATH} 未找到。"); 
     DEFAULT_DB_SCHEMA, DEFAULT_SYSTEM_MESSAGE_TEMPLATE, PROMPT_TEMPLATE = "", "助手。", "{system_message}\n{schema}\n{question}\nSQL:"
 except yaml.YAMLError as e: print(f"错误: 解析配置文件 {PROMPT_CONFIG_PATH} 失败。 Error: {e}"); exit(1)
 except Exception as e: print(f"加载配置文件 {PROMPT_CONFIG_PATH} 时发生未知错误: {e}"); exit(1)
 
 # --- 3. 打印配置 ---
-print("--- API 服务器配置 ---") # ... (内容不变) ...
+print("--- API 服务器配置 ---") 
 print(f"模型 ID (MODEL_ID): {MODEL_ID}")
 print(f"默认 DB Schema 已加载: {'是' if DEFAULT_DB_SCHEMA else '否'}")
 print("--------------------------")
@@ -84,7 +84,7 @@ if MODEL_DTYPE_STR not in dtype_map: print(f"警告: 无效的 MODEL_DTYPE '{MOD
 
 # --- 6. 设备检测逻辑 ---
 def get_device() -> str:
-    global DEVICE; # ... (完整逻辑不变) ...
+    global DEVICE; 
     if DEVICE: return DEVICE
     _device = None; pref = DEVICE_PREFERENCE; print("\n--- 设备检测 ---")
     if pref == "cuda":
@@ -104,7 +104,7 @@ def get_device() -> str:
 
 # --- 7. 模型加载逻辑 ---
 def load_model_and_tokenizer():
-    global model, tokenizer, model_ready, DEVICE, MODEL_DTYPE; # ... (完整逻辑不变) ...
+    global model, tokenizer, model_ready, DEVICE, MODEL_DTYPE; 
     if model_ready: return
     DEVICE = get_device()
     print(f"\n开始加载模型 '{MODEL_ID}' 到设备 '{DEVICE}' (类型 {MODEL_DTYPE})...")
@@ -125,7 +125,7 @@ def load_model_and_tokenizer():
 async def lifespan(app: FastAPI):
     print("服务器启动中..."); load_model_and_tokenizer()
     yield
-    print("服务器关闭中..."); # ... (清理逻辑不变) ...
+    print("服务器关闭中..."); 
     global model, tokenizer, model_ready, DEVICE; model, tokenizer, model_ready, DEVICE = None, None, False, None;
     if torch.backends.mps.is_available():
          try: torch.mps.empty_cache()
@@ -142,11 +142,10 @@ app = FastAPI(
 # --- 10. API 密钥认证 ---
 api_key_header_auth = APIKeyHeader(name="Authorization", auto_error=False)
 async def verify_api_key(api_key_header: Optional[str] = Security(api_key_header_auth)) -> str:
-    # ... (逻辑不变) ...
     if not ALLOWED_API_KEYS: return "insecure_mode_key"
     if api_key_header is None: raise HTTPException(status_code=HTTP_403_FORBIDDEN, detail="请求头缺少 'Authorization'")
     if api_key_header.startswith("Bearer "):
-        key = api_key_header.replace("Bearer ", "");
+        key = api_key_header.replace("Bearer ", ""); 
         if key in ALLOWED_API_KEYS: return key
     raise HTTPException(status_code=HTTP_403_FORBIDDEN, detail="无效的 API 密钥或格式")
 
@@ -274,7 +273,7 @@ async def generate_sql_stream(
 ) -> AsyncGenerator[str, None]:
     """异步生成器，流式生成 SQL，并在流中进行后处理，只发送提取出的 SQL 内容。"""
     global model, tokenizer, DEVICE, PROMPT_TEMPLATE, MODEL_ID
-    if not model_ready: # 错误处理 (不变)
+    if not model_ready: # 错误处理
         error_detail = "模型未准备好或加载失败。"; print(f"错误: {error_detail}")
         error_chunk = ChatCompletionChunk(model=MODEL_ID, choices=[ChatCompletionChunkChoice(index=0, delta=DeltaMessage(role="assistant", content=f"错误: {error_detail}"), finish_reason="error")])
         yield f"data: {error_chunk.model_dump_json()}\n\n"; yield f"data: [DONE]\n\n"; return
@@ -302,11 +301,11 @@ async def generate_sql_stream(
         stop_yielding = False       # 标记是否应停止发送内容
         finish_reason = "stop"      # 默认结束原因
 
-        # 发送第一个含角色的块 (不变)
+        # 发送第一个含角色的块
         first_chunk = ChatCompletionChunk(id=response_id, model=MODEL_ID, choices=[ChatCompletionChunkChoice(index=0, delta=DeltaMessage(role="assistant"), finish_reason=None)])
         yield f"data: {first_chunk.model_dump_json()}\n\n"
 
-        # 使用同步 for 循环迭代 streamer (不变)
+        # 使用同步 for 循环迭代 streamer
         try:
             for raw_chunk in streamer: # 迭代原始输出块
                 if not raw_chunk: continue # 跳过空块
@@ -367,7 +366,7 @@ async def generate_sql_stream(
             print(f"生成速度 (基于原始输出估算): {tokens_per_sec:.2f} tokens/sec。 Prompt tokens: {prompt_tokens}, Completion tokens: {completion_tokens}")
             print(f"最终发送给客户端的 SQL 长度: {len(processed_sql_yielded)}") # 打印实际发送长度
 
-    except Exception as e_stream_outer: # 捕获外层错误 (不变)
+    except Exception as e_stream_outer: # 捕获外层错误
         print(f"!!! 流式生成函数顶层发生错误: {e_stream_outer} !!!")
         try:
             error_chunk = ChatCompletionChunk(model=MODEL_ID, choices=[ChatCompletionChunkChoice(index=0, delta=DeltaMessage(content=f"\n服务器内部流式错误: {e_stream_outer}"), finish_reason="error")])
@@ -376,11 +375,11 @@ async def generate_sql_stream(
         if 'thread' in locals() and thread.is_alive(): await to_thread(thread.join)
 
 
-# --- 14. API 端点 (不变, 根据 stream 调用不同逻辑) ---
+# --- 14. API 端点 ( 根据 stream 调用不同逻辑) ---
 @app.post("/v1/chat/completions")
 async def create_chat_completion(request: ChatCompletionRequest, api_key: str = Security(verify_api_key)):
     if not model_ready: raise HTTPException(status_code=HTTP_503_SERVICE_UNAVAILABLE, detail="模型未准备好。")
-    # ... (提取 schema, question, 参数等逻辑不变) ...
+    # ... (提取 schema, question) ...
     if not request.messages: raise HTTPException(status_code=400, detail="'messages' 不能为空。")
     last_user_message = next((msg for msg in reversed(request.messages) if msg.role == "user"), None)
     if not last_user_message: raise HTTPException(status_code=400, detail="未找到 'user' 消息。")
@@ -423,7 +422,7 @@ async def create_chat_completion(request: ChatCompletionRequest, api_key: str = 
         except Exception as e: raise HTTPException(status_code=500, detail=f"生成过程中意外错误: {e}")
         end_gen_time = time.time(); gen_duration = end_gen_time - start_gen_time
         print(f"非流式生成线程执行完毕。耗时: {gen_duration:.2f} 秒。")
-        # 日志记录 (不变)
+        # 日志记录 
         if gen_duration > 0 and completion_tokens > 0:
              tokens_per_sec = completion_tokens / gen_duration
              print(f"生成速度 (基于原始输出): {tokens_per_sec:.2f} tokens/sec。 Prompt: {prompt_tokens}, Completion: {completion_tokens}")
