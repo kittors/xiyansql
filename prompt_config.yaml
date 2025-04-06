@@ -38,7 +38,7 @@ database_schema: |
     company_code VARCHAR(50) COMMENT '单位编号',
     company_name VARCHAR(100) COMMENT '单位名称',
     factor_code VARCHAR(50) COMMENT '因子编号',
-    factor_name VARCHAR(100) COMMENT '因子名称',
+    factor_name VARCHAR(100) COMMENT '因子名称 (例如 其他业务成本,投资收益,营业外收入,可再生能源补贴成本,大工业1至10千伏基本需量电费,大工业110千伏售电量,投资收益 等等)',
     factor_val DECIMAL(20, 6) COMMENT '因子值',
     factor_huanbi DECIMAL(10, 4) COMMENT '因子环比',
     factor_tongbi DECIMAL(10, 4) COMMENT '因子同比',
